@@ -362,10 +362,13 @@ private:
     marker_msg.pose.orientation.z = 0;
     marker_msg.pose.orientation.w = 1;
 
+    const double radius = static_cast<const rmf_traffic::geometry::Circle&>(
+        trajectory.begin()->get_profile()->get_shape()->source()).get_radius();
+
     // Set the scale of the marker -- 1x1x1 here means 1m on a side
-    marker_msg.scale.x =  0.5;
-    marker_msg.scale.y =  0.5;
-    marker_msg.scale.z = 1.0;
+    marker_msg.scale.x =  radius;
+    marker_msg.scale.y =  radius;
+    marker_msg.scale.z = radius;
 
     // Set the color -- be sure to set alpha to something non-zero!
     if (conflict)
@@ -405,14 +408,39 @@ private:
       return p;
     };
 
-    auto it = trajectory.find(start_time);
-    const auto motion = it->compute_motion();
-    marker_msg.points.push_back(
-          make_point(motion->compute_position(start_time)));
+    const auto start_it = trajectory.find(start_time);
+    const auto end_it = trajectory.find(end_time);
+    auto it = start_it;
 
     for (; it <= trajectory.find(end_time); it++)
     {
-      marker_msg.points.push_back(make_point(it->get_finish_position()));
+      auto motion = it->compute_motion();
+      if (it == start_it)
+      {
+        for (auto t = start_time; t <= it->get_finish_time(); t+=1s)
+        {
+          marker_msg.points.push_back(make_point(motion->compute_position(t)));
+        }
+      }
+      else if (it == end_it)
+      {
+        auto previous_it = it;
+        --previous_it;
+        for (auto t = previous_it->get_finish_time(); t <= end_time; t+=1s)
+        {
+          marker_msg.points.push_back(make_point(motion->compute_position(t)));
+        }
+      marker_msg.points.push_back(make_point(motion->compute_position(end_time)));
+      }
+      else
+      {
+        auto previous_it = it;
+        --previous_it;
+        for (auto t = previous_it->get_finish_time(); t <= it->get_finish_time(); t+=1s)
+        {
+          marker_msg.points.push_back(make_point(motion->compute_position(t)));
+        }
+      }
     }
 
     return marker_msg;
