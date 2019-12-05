@@ -147,7 +147,7 @@ private:
         auto location_marker = make_location_marker(element, traj_param);
         marker_array.markers.push_back(location_marker);
 
-        auto path_marker = make_path_marker(element, traj_param);
+        auto path_marker = make_path_marker2(element, traj_param);
         marker_array.markers.push_back(path_marker);
 
         // adding to id to _marker_tracker 
@@ -314,6 +314,88 @@ private:
     const auto t_finish_time = *trajectory.finish_time();
     const auto end_time = std::min(t_finish_time, param.finish_time);
  
+    auto make_point = [](const Eigen::Vector3d& tp) -> Point
+    {
+      Point p;
+      p.x = tp[0];
+      p.y = tp[1];
+      p.z = 0;
+      return p;
+    };
+
+    auto it = trajectory.find(start_time);
+    const auto motion = it->compute_motion();
+    marker_msg.points.push_back(
+          make_point(motion->compute_position(start_time)));
+
+    for (; it <= trajectory.find(end_time); it++)
+    {
+      marker_msg.points.push_back(make_point(it->get_finish_position()));
+    }
+
+    return marker_msg;
+  }
+
+  visualization_msgs::msg::Marker make_path_marker2(
+        Element element,
+        const RequestParam param)
+  {
+    // Using list of spheres 
+    const auto& trajectory = element.trajectory;
+    const bool conflict = is_conflict(element.id);
+
+    Marker marker_msg;
+
+    marker_msg.header.frame_id = _frame_id; // map
+    marker_msg.header.stamp = rmf_traffic_ros2::convert(param.start_time);
+    marker_msg.ns = "trajectory";
+    marker_msg.id = -1* element.id;
+    marker_msg.type = marker_msg.SPHERE_LIST;
+    marker_msg.action = marker_msg.ADD;
+
+    marker_msg.pose.position.x = 0;
+    marker_msg.pose.position.y = 0;
+    marker_msg.pose.position.z = 0;
+
+    marker_msg.pose.orientation.x = 0;
+    marker_msg.pose.orientation.y = 0;
+    marker_msg.pose.orientation.z = 0;
+    marker_msg.pose.orientation.w = 1;
+
+    // Set the scale of the marker -- 1x1x1 here means 1m on a side
+    marker_msg.scale.x =  0.5;
+    marker_msg.scale.y =  0.5;
+    marker_msg.scale.z = 1.0;
+
+    // Set the color -- be sure to set alpha to something non-zero!
+    if (conflict)
+    {
+      marker_msg.color.r = 1.0f;
+      marker_msg.color.g = 0.0f;
+    }
+    else
+    {
+      marker_msg.color.r = 0.0f;
+      marker_msg.color.g = 1.0f;
+    }
+    marker_msg.color.b = 0.0f;
+    marker_msg.color.a = 0.5;
+
+    if (_rate <= 1)
+      marker_msg.lifetime = convert(_timer_period);
+    else
+    {
+      builtin_interfaces::msg::Duration duration;
+      duration.sec = 1;
+      duration.nanosec = 0;
+      marker_msg.lifetime = duration;
+    }
+
+    const auto t_start_time = *trajectory.start_time();
+    const auto start_time = std::max(t_start_time, param.start_time);
+    const auto t_finish_time = *trajectory.finish_time();
+    const auto end_time = std::min(t_finish_time, param.finish_time);
+
     auto make_point = [](const Eigen::Vector3d& tp) -> Point
     {
       Point p;
