@@ -418,13 +418,14 @@ private:
     const auto start_it = trajectory.find(start_time);
     const auto end_it = trajectory.find(end_time);
     auto it = start_it;
+    const auto delta = 1s;
 
     for (; it <= trajectory.find(end_time); it++)
     {
       auto motion = it->compute_motion();
       if (it == start_it)
       {
-        for (auto t = start_time; t <= it->get_finish_time(); t+=1s)
+        for (auto t = start_time; t <= it->get_finish_time(); t+=delta)
         {
           marker_msg.points.push_back(make_point(motion->compute_position(t)));
         }
@@ -433,7 +434,7 @@ private:
       {
         auto previous_it = it;
         --previous_it;
-        for (auto t = previous_it->get_finish_time(); t <= end_time; t+=1s)
+        for (auto t = previous_it->get_finish_time(); t <= end_time; t+=delta)
         {
           marker_msg.points.push_back(make_point(motion->compute_position(t)));
         }
@@ -443,7 +444,7 @@ private:
       {
         auto previous_it = it;
         --previous_it;
-        for (auto t = previous_it->get_finish_time(); t <= it->get_finish_time(); t+=1s)
+        for (auto t = previous_it->get_finish_time(); t <= it->get_finish_time(); t+=delta)
         {
           marker_msg.points.push_back(make_point(motion->compute_position(t)));
         }
