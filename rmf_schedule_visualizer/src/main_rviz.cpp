@@ -429,6 +429,7 @@ private:
         {
           marker_msg.points.push_back(make_point(motion->compute_position(t)));
         }
+        marker_msg.points.push_back(make_point(it->get_finish_position()));
       }
       else if (it == end_it)
       {
