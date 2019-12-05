@@ -49,11 +49,13 @@ public:
       rmf_schedule_visualizer::VisualizerDataNode& visualizer_data_node,
       std::string map_name,
       double rate = 1,
+      int style = 1,
       std::string frame_id = "/map")
   : Node(node_name),
     _visualizer_data_node(visualizer_data_node),
     _rate(rate),
-    _frame_id(frame_id)
+    _frame_id(frame_id),
+    _style(style)
   {
     _count = 0;
     // TODO add a constructor for RvizParam
@@ -147,7 +149,12 @@ private:
         auto location_marker = make_location_marker(element, traj_param);
         marker_array.markers.push_back(location_marker);
 
-        auto path_marker = make_path_marker2(element, traj_param);
+        Marker path_marker;
+        if(_style == 1)
+          path_marker = make_path_marker(element, traj_param);
+        else if (_style == 2)
+          path_marker = make_path_marker2(element, traj_param);
+
         marker_array.markers.push_back(path_marker);
 
         // adding to id to _marker_tracker 
@@ -499,6 +506,7 @@ private:
 
   double _rate;
   int _count;
+  int _style;
   std::string _frame_id;
   std::vector<int64_t> _conflict_id;
   std::unordered_set<uint64_t> _marker_tracker; 
@@ -561,6 +569,10 @@ int main(int argc, char* argv[])
   std::string map_name = "level1";
   get_arg(args, "-m", map_name, "map name", false);
 
+  std::string style_string;
+  get_arg(args, "-s", style_string, "style", false);
+  int style = style_string.empty()? 1 : std::stoi(style_string);
+
   const auto visualizer_data_node =
     rmf_schedule_visualizer::VisualizerDataNode::make(node_name);
 
@@ -578,7 +590,8 @@ int main(int argc, char* argv[])
       "rviz_node",
       *visualizer_data_node,
       std::move(map_name),
-      rate);
+      rate,
+      style);
 
   rclcpp::executors::MultiThreadedExecutor executor;
   executor.add_node(visualizer_data_node);
